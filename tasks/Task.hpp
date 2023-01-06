@@ -3,16 +3,14 @@
 #ifndef LIDAR_OUSTER_TASK_TASK_HPP
 #define LIDAR_OUSTER_TASK_TASK_HPP
 
-#include "lidar_ouster/TaskBase.hpp"
+#include <lidar_ouster/TaskBase.hpp>
 #include <string>
 
-#include "ouster/client.h"
-#include "ouster/impl/build.h"
-#include "ouster/lidar_scan.h"
-#include "ouster/types.h"
-
-using namespace std;
-using namespace ouster;
+#include <base/samples/DepthMap.hpp>
+#include <ouster/client.h>
+#include <ouster/impl/build.h>
+#include <ouster/lidar_scan.h>
+#include <ouster/types.h>
 
 namespace lidar_ouster {
 
@@ -41,9 +39,10 @@ argument.
         friend class TaskBase;
 
     public:
-        string sensor_hostname= "";
-        const string data_destination = "";
-        std::shared_ptr<sensor::client> handle;
+        const size_t UDP_BUF_SIZE = 65536;
+        std::string sensor_hostname = "";
+        const std::string data_destination = "";
+        std::shared_ptr<ouster::sensor::client> handle;
 
     public:
         /** TaskContext constructor for Task
@@ -114,6 +113,12 @@ argument.
          * before calling start() again.
          */
         void cleanupHook();
+
+        bool configureLidar();
+        bool initLidar();
+        ouster::sensor::sensor_info getMetadata();
+        ouster::LidarScan acquireData(ouster::sensor::sensor_info &metadata);
+        void convertData(ouster::LidarScan& scan, ouster::sensor::sensor_info &info);
     };
 }
 
