@@ -117,8 +117,9 @@ argument.
         bool configureLidar();
         bool initLidar();
         ouster::sensor::sensor_info getMetadata();
-        ouster::LidarScan acquireData(ouster::sensor::sensor_info &metadata);
-        void convertData(ouster::LidarScan& scan, ouster::sensor::sensor_info &info);
+        ouster::LidarScan acquireData(ouster::sensor::sensor_info& metadata);
+        void convertData(ouster::LidarScan& scan,
+            ouster::sensor::sensor_info& info);
     };
 }
 

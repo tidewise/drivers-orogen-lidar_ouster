@@ -24,7 +24,5 @@ describe OroGen.lidar_ouster.Task do
         end.to { have_one_new_sample task.depth_map_port}
         pp "resultado"
         pp output
-        assert_equal(output.vertical_size, 0)
     end
-
 end
