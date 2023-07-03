@@ -16,7 +16,7 @@ namespace lidar_ouster {
      */
     struct sensor_config {
         std::string udp_dest; ///< The destination address for the
-                              ///< lidar/imu data to be sent to
+                              ///< lidar and imu data to be sent to
         int udp_port_lidar;   ///< The destination port for the lidar data
                               ///< to be sent to
         int udp_port_imu;     ///< The destination port for the imu data to be sent to

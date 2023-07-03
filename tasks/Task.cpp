@@ -5,9 +5,9 @@
 #include <functional>
 #include <iostream>
 #include <utility>
+
 using namespace lidar_ouster;
 using namespace ouster;
-
 using namespace std;
 
 Task::Task(std::string const& name)
@@ -27,8 +27,8 @@ bool Task::configureHook()
 {
     if (!TaskBase::configureHook())
         return false;
-    if (!initLidar()) {
-        LOG_ERROR_S << "Failed to connect to Lidar!" << std::endl;
+
+    if (!configureLidar()) {
         return false;
     }
     return true;
@@ -37,14 +37,19 @@ bool Task::startHook()
 {
     if (!TaskBase::startHook())
         return false;
+    auto lidar_config = _lidar_config.get();
+    handle = sensor::init_client(_ip_address.get(), data_destination);
+    if (!handle) {
+        throw std::runtime_error("Failed to connect to sensor!");
+    }
+    metadata = getMetadata();
     return true;
 }
 void Task::updateHook()
 {
     TaskBase::updateHook();
-    auto metadata = getMetadata();
-    auto data = acquireData(metadata);
-    convertData(data, metadata);
+    auto data = acquireData();
+    convertData(data);
 }
 void Task::errorHook()
 {
@@ -53,21 +58,11 @@ void Task::errorHook()
 void Task::stopHook()
 {
     TaskBase::stopHook();
+    handle.reset();
 }
 void Task::cleanupHook()
 {
     TaskBase::cleanupHook();
-}
-
-bool Task::initLidar()
-{
-    sensor_hostname = _ip_address.get();
-    if (!configureLidar())
-        return false;
-    handle = sensor::init_client(sensor_hostname, data_destination);
-    if (!handle)
-        return false;
-    return true;
 }
 
 sensor::sensor_info Task::getMetadata()
@@ -76,17 +71,17 @@ sensor::sensor_info Task::getMetadata()
     return sensor::parse_metadata(metadata);
 }
 
-LidarScan Task::acquireData(sensor::sensor_info& info)
+LidarScan Task::acquireData()
 {
-    size_t width = info.format.columns_per_frame;
-    size_t heigth = info.format.pixels_per_column;
+    size_t width = metadata.format.columns_per_frame;
+    size_t heigth = metadata.format.pixels_per_column;
 
     // A LidarScan holds lidar data for an entire rotation of the device
-    LidarScan scan{width, heigth, info.format.udp_profile_lidar};
+    LidarScan scan{width, heigth, metadata.format.udp_profile_lidar};
 
     // A ScanBatcher can be used to batch packets into scans
-    sensor::packet_format pkt_format = sensor::get_format(info);
-    ScanBatcher batch_to_scan(info.format.columns_per_frame, pkt_format);
+    sensor::packet_format pkt_format = sensor::get_format(metadata);
+    ScanBatcher batch_to_scan(metadata.format.columns_per_frame, pkt_format);
 
     // buffer to store raw packet data
     auto pkt_buffer = std::make_unique<uint8_t[]>(UDP_BUF_SIZE);
@@ -107,7 +102,7 @@ LidarScan Task::acquireData(sensor::sensor_info& info)
                 }
             }
             if (batch_to_scan(pkt_buffer.get(), scan)) {
-                if (scan.complete(info.format.column_window)) {
+                if (scan.complete(metadata.format.column_window)) {
                     status = true;
                 }
             }
@@ -116,7 +111,7 @@ LidarScan Task::acquireData(sensor::sensor_info& info)
     return scan;
 }
 
-void Task::convertData(LidarScan& scan, ouster::sensor::sensor_info& info)
+void Task::convertData(LidarScan& scan)
 {
 
     base::samples::DepthMap depth_map;
@@ -128,7 +123,7 @@ void Task::convertData(LidarScan& scan, ouster::sensor::sensor_info& info)
     depth_map.vertical_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
     depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
 
-    auto width = info.format.columns_per_frame;
+    auto width = metadata.format.columns_per_frame;
     // auto height = info.format.pixels_per_column;
     // const double azimuth_radians = M_PI * 2.0 / width;
 
@@ -154,12 +149,12 @@ void Task::convertData(LidarScan& scan, ouster::sensor::sensor_info& info)
     //     info.beam_azimuth_angles.end(),
     //     std::back_inserter(depth_map.horizontal_interval));
 
-    depth_map.vertical_size = info.format.pixels_per_column;
-    depth_map.horizontal_size = info.format.columns_per_frame;
+    depth_map.vertical_size = metadata.format.pixels_per_column;
+    depth_map.horizontal_size = metadata.format.columns_per_frame;
 
     // auto range = scan.field(sensor::ChanField::RANGE);
     auto img = scan.field(sensor::ChanField::RANGE);
-    auto data = destagger<uint32_t>(img, info.format.pixel_shift_by_row);
+    auto data = destagger<uint32_t>(img, metadata.format.pixel_shift_by_row);
 
     auto* raw = data.data();
     int rowStride = data.rowStride();
@@ -176,6 +171,7 @@ void Task::convertData(LidarScan& scan, ouster::sensor::sensor_info& info)
 bool Task::configureLidar()
 {
     uint8_t config_flags = 0;
+    auto sensor_hostname = _ip_address.get();
     auto lidar_config = _lidar_config.get();
 
     // you cannot set the udp_dest flag while simultaneously setting

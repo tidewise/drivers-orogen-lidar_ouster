@@ -40,9 +40,9 @@ argument.
 
     public:
         const size_t UDP_BUF_SIZE = 65536;
-        std::string sensor_hostname = "";
         const std::string data_destination = "";
         std::shared_ptr<ouster::sensor::client> handle;
+        ouster::sensor::sensor_info metadata;
 
     public:
         /** TaskContext constructor for Task
@@ -115,11 +115,9 @@ argument.
         void cleanupHook();
 
         bool configureLidar();
-        bool initLidar();
         ouster::sensor::sensor_info getMetadata();
-        ouster::LidarScan acquireData(ouster::sensor::sensor_info& metadata);
-        void convertData(ouster::LidarScan& scan,
-            ouster::sensor::sensor_info& info);
+        ouster::LidarScan acquireData();
+        void convertData(ouster::LidarScan& scan);
     };
 }
 
