@@ -130,8 +130,8 @@ void Task::convertData(LidarScan& scan)
     depth_map.horizontal_interval.push_back(M_PI * 2.0);
     depth_map.horizontal_interval.push_back(0);
 
-    depth_map.vertical_interval.push_back(22.5 * M_PI / (180.0 * 2.0));
-    depth_map.vertical_interval.push_back(-22.5 * M_PI / (180.0 * 2.0));
+    depth_map.vertical_interval.push_back(22.5 * M_PI / (180.0));
+    depth_map.vertical_interval.push_back(-22.5 * M_PI / (180.0));
 
     // populate angles for each pixel
     // for (size_t v = 0; v < width; v++) {
