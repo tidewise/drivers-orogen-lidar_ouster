@@ -124,8 +124,7 @@ void Task::convertData(LidarScan& scan)
     depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
 
     auto width = metadata.format.columns_per_frame;
-    // auto height = info.format.pixels_per_column;
-    // const double azimuth_radians = M_PI * 2.0 / width;
+    auto height = metadata.format.pixels_per_column;
 
     depth_map.horizontal_interval.push_back(M_PI * 2.0);
     depth_map.horizontal_interval.push_back(0);
@@ -133,37 +132,17 @@ void Task::convertData(LidarScan& scan)
     depth_map.vertical_interval.push_back(22.5 * M_PI / (180.0));
     depth_map.vertical_interval.push_back(-22.5 * M_PI / (180.0));
 
-    // populate angles for each pixel
-    // for (size_t v = 0; v < width; v++) {
-    //     for (size_t u = 0; u < height; u++) {
-    //         size_t i = u * width + v;
-    //         depth_map.horizontal_interval.push_back(2.0 * M_PI - (v *
-    //         azimuth_radians));
-    //     }
-    // }
-
-    // copy(info.beam_altitude_angles.begin(),
-    //     info.beam_altitude_angles.end(),
-    //     std::back_inserter(depth_map.vertical_interval));
-    // copy(info.beam_azimuth_angles.begin(),
-    //     info.beam_azimuth_angles.end(),
-    //     std::back_inserter(depth_map.horizontal_interval));
-
     depth_map.vertical_size = metadata.format.pixels_per_column;
     depth_map.horizontal_size = metadata.format.columns_per_frame;
 
-    // auto range = scan.field(sensor::ChanField::RANGE);
     auto img = scan.field(sensor::ChanField::RANGE);
     auto data = destagger<uint32_t>(img, metadata.format.pixel_shift_by_row);
 
-    auto* raw = data.data();
-    int rowStride = data.rowStride();
-
     depth_map.distances.resize(data.rows() * data.cols());
-    for (int i = 0; i < data.rows(); ++i) {
-        memcpy(&raw[i * rowStride],
-            &depth_map.distances[i * data.cols()],
-            sizeof(raw[0]) * data.cols());
+    for (unsigned int h = 0; h < height; h++) {
+        for (unsigned int w = 0; w < width; w++) {
+            depth_map.distances[h * width + w] = static_cast<double>(data(h, w)) / 1000.0;
+        }
     }
     _depth_map.write(depth_map);
 }
@@ -174,8 +153,11 @@ bool Task::configureLidar()
     auto sensor_hostname = _ip_address.get();
     auto lidar_config = _lidar_config.get();
 
+    ouster::sensor::sensor_config config;
+
     // you cannot set the udp_dest flag while simultaneously setting
     //  config.udp_dest Will throw an invalid_argument if you do
+    // todo: check this
     if (!lidar_config.udp_dest.empty()) {
         ouster::sensor::sensor_config config;
         config_flags |= ouster::sensor::CONFIG_UDP_DEST_AUTO;
@@ -187,9 +169,10 @@ bool Task::configureLidar()
         sensor::set_config(sensor_hostname, config, config_flags);
     }
 
-    ouster::sensor::sensor_config config;
-    config.udp_port_lidar = lidar_config.udp_port_lidar;
-    config.udp_port_imu = lidar_config.udp_port_imu;
+    // todo: implement sanity check?
+    // config.udp_port_lidar = lidar_config.udp_port_lidar;
+    // config.udp_port_imu = lidar_config.udp_port_imu;
+
     config.ts_mode = lidar_config.ts_mode;
     config.ld_mode = lidar_config.ld_mode;
     config.operating_mode = lidar_config.operating_mode;
