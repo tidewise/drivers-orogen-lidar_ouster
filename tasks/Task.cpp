@@ -169,10 +169,8 @@ bool Task::configureLidar()
         sensor::set_config(sensor_hostname, config, config_flags);
     }
 
-    // todo: implement sanity check?
-    // config.udp_port_lidar = lidar_config.udp_port_lidar;
-    // config.udp_port_imu = lidar_config.udp_port_imu;
-
+    config.udp_port_lidar = lidar_config.udp_port_lidar;
+    config.udp_port_imu = lidar_config.udp_port_imu;
     config.ts_mode = lidar_config.ts_mode;
     config.ld_mode = lidar_config.ld_mode;
     config.operating_mode = lidar_config.operating_mode;
