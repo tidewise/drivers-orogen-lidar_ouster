@@ -12,9 +12,13 @@ import_types_from "base"
 task_context "Task" do
     needs_configuration
 
+    # The sensor hostname
     property "ip_address", "/std/string"
+
+    # The parameters to configure the sensor
     property "lidar_config", "lidar_ouster/sensor_config"
 
+    # The sensor output as a depth map
     output_port "depth_map", "/base/samples/DepthMap"
 
     periodic 0.1
