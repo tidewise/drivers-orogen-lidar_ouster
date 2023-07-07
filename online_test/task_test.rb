@@ -7,15 +7,46 @@ import_types_from "base"
 describe OroGen.lidar_ouster.Task do
     run_live
 
-    attr_reader :task
+    it "starts and outputs sensor data" do
+        task = create_configure_and_start_task
+        output = expect_execution.timeout(50).to do
+            have_one_new_sample task.depth_map_port
+        end
+        pp output
+        ask_ok
+    end
 
-    before do
-        @task = syskit_deploy(
+    it "works when restarted" do
+        task = create_configure_and_start_task
+        expect_execution { task.stop! }.to { emit task.stop_event }
+        task = create_configure_and_start_task
+        output = expect_execution.timeout(50).to do
+            have_one_new_sample task.depth_map_port
+        end
+        pp output
+        ask_ok
+    end
+
+    it "works when reconfigured" do
+        task = create_configure_and_start_task
+        expect_execution { task.stop! }.to { emit task.stop_event }
+        task.needs_reconfiguration!
+        task = create_configure_and_start_task
+        output = expect_execution.timeout(50).to do
+            have_one_new_sample task.depth_map_port
+        end
+        pp output
+        ask_ok
+    end
+
+    # rubocop: disable Metrics/AbcSize
+    def create_task
+        task = syskit_deploy(
             OroGen.lidar_ouster
                   .Task
                   .deployed_as("lidar_ouster_task")
         )
-        @task.properties.ip_address = "os-992203000508.local"
+        task.properties.ip_address = "os-992203000508.local"
         config = Types.lidar_ouster.SensorConfig.new
         config.signal_multiplier = 1
         config.ld_mode = 4
@@ -40,19 +71,18 @@ describe OroGen.lidar_ouster.Task do
         config.nmea_leap_seconds = 0
         config.phase_lock_enable = false
         config.phase_lock_offset = 0
-        @task.properties.lidar_config = config
+        task.properties.lidar_config = config
+        task
     end
+    # rubocop: enable Metrics/AbcSize
 
-    it "displays information" do
-        syskit_configure(@task)
-        expect_execution { task.start! }.timeout(100).to do
+    def create_configure_and_start_task
+        task = create_task
+        syskit_configure(task)
+        expect_execution { task.start! }.timeout(50).to do
             emit task.start_event
         end
-        output = expect_execution do
-        end.timeout(50).to { have_one_new_sample task.depth_map_port }
-        pp "resultado"
-        pp output
-        ask_ok
+        task
     end
 
     def ask_ok
