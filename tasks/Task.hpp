@@ -5,7 +5,6 @@
 
 #include <lidar_ouster/TaskBase.hpp>
 #include <string>
-
 #include <base/samples/DepthMap.hpp>
 #include <ouster/client.h>
 #include <ouster/impl/build.h>
@@ -38,11 +37,11 @@ argument.
     class Task : public TaskBase {
         friend class TaskBase;
 
-    public:
-        const size_t UDP_BUF_SIZE = 65536;
-        const std::string data_destination = "";
-        std::shared_ptr<ouster::sensor::client> handle;
-        ouster::sensor::sensor_info metadata;
+    private:
+        const size_t m_udp_buf_size = 65536;
+        const std::string m_data_destination = "";
+        std::shared_ptr<ouster::sensor::client> m_handle;
+        ouster::sensor::sensor_info m_metadata;
 
     public:
         /** TaskContext constructor for Task

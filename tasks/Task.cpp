@@ -38,11 +38,11 @@ bool Task::startHook()
     if (!TaskBase::startHook())
         return false;
     auto lidar_config = _lidar_config.get();
-    handle = sensor::init_client(_ip_address.get(), data_destination);
-    if (!handle) {
+    m_handle = sensor::init_client(_ip_address.get(), m_data_destination);
+    if (!m_handle) {
         throw std::runtime_error("Failed to connect to sensor!");
     }
-    metadata = getMetadata();
+    m_metadata = getMetadata();
     return true;
 }
 void Task::updateHook()
@@ -58,7 +58,7 @@ void Task::errorHook()
 void Task::stopHook()
 {
     TaskBase::stopHook();
-    handle.reset();
+    m_handle.reset();
 }
 void Task::cleanupHook()
 {
@@ -67,27 +67,27 @@ void Task::cleanupHook()
 
 sensor::sensor_info Task::getMetadata()
 {
-    auto metadata = sensor::get_metadata(*handle);
+    auto metadata = sensor::get_metadata(*m_handle);
     return sensor::parse_metadata(metadata);
 }
 
 LidarScan Task::acquireData()
 {
-    size_t width = metadata.format.columns_per_frame;
-    size_t heigth = metadata.format.pixels_per_column;
+    size_t width = m_metadata.format.columns_per_frame;
+    size_t heigth = m_metadata.format.pixels_per_column;
 
     // A LidarScan holds lidar data for an entire rotation of the device
-    LidarScan scan{width, heigth, metadata.format.udp_profile_lidar};
+    LidarScan scan{width, heigth, m_metadata.format.udp_profile_lidar};
 
     // A ScanBatcher can be used to batch packets into scans
-    sensor::packet_format pkt_format = sensor::get_format(metadata);
-    ScanBatcher batch_to_scan(metadata.format.columns_per_frame, pkt_format);
+    sensor::packet_format pkt_format = sensor::get_format(m_metadata);
+    ScanBatcher batch_to_scan(m_metadata.format.columns_per_frame, pkt_format);
 
     // buffer to store raw packet data
-    auto pkt_buffer = std::make_unique<uint8_t[]>(UDP_BUF_SIZE);
+    auto pkt_buffer = std::make_unique<uint8_t[]>(m_udp_buf_size);
     bool status = false;
     while (!status) {
-        sensor::client_state cli_state = sensor::poll_client(*handle);
+        sensor::client_state cli_state = sensor::poll_client(*m_handle);
         // check for error status
         if (cli_state & sensor::CLIENT_ERROR) {
             throw std::runtime_error("Sensor client returned error state!");
@@ -95,14 +95,14 @@ LidarScan Task::acquireData()
 
         // check for lidar data, read a packet and add it to the current batch
         if (cli_state & sensor::LIDAR_DATA) {
-            if (!sensor::read_lidar_packet(*handle, pkt_buffer.get(), pkt_format)) {
+            if (!sensor::read_lidar_packet(*m_handle, pkt_buffer.get(), pkt_format)) {
                 {
                     throw std::runtime_error(
                         "Failed to read a packet of the expected size!");
                 }
             }
             if (batch_to_scan(pkt_buffer.get(), scan)) {
-                if (scan.complete(metadata.format.column_window)) {
+                if (scan.complete(m_metadata.format.column_window)) {
                     status = true;
                 }
             }
@@ -123,8 +123,8 @@ void Task::convertData(LidarScan& scan)
     depth_map.vertical_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
     depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
 
-    auto width = metadata.format.columns_per_frame;
-    auto height = metadata.format.pixels_per_column;
+    auto width = m_metadata.format.columns_per_frame;
+    auto height = m_metadata.format.pixels_per_column;
 
     depth_map.horizontal_interval.push_back(M_PI * 2.0);
     depth_map.horizontal_interval.push_back(0);
@@ -132,11 +132,11 @@ void Task::convertData(LidarScan& scan)
     depth_map.vertical_interval.push_back(22.5 * M_PI / (180.0));
     depth_map.vertical_interval.push_back(-22.5 * M_PI / (180.0));
 
-    depth_map.vertical_size = metadata.format.pixels_per_column;
-    depth_map.horizontal_size = metadata.format.columns_per_frame;
+    depth_map.vertical_size = m_metadata.format.pixels_per_column;
+    depth_map.horizontal_size = m_metadata.format.columns_per_frame;
 
     auto img = scan.field(sensor::ChanField::RANGE);
-    auto data = destagger<uint32_t>(img, metadata.format.pixel_shift_by_row);
+    auto data = destagger<uint32_t>(img, m_metadata.format.pixel_shift_by_row);
 
     depth_map.distances.resize(data.rows() * data.cols());
     for (unsigned int h = 0; h < height; h++) {
