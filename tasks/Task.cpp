@@ -2,9 +2,6 @@
 
 #include "Task.hpp"
 #include <base-logging/Logging.hpp>
-#include <functional>
-#include <iostream>
-#include <utility>
 
 using namespace lidar_ouster;
 using namespace ouster;
@@ -96,10 +93,7 @@ LidarScan Task::acquireData()
         // check for lidar data, read a packet and add it to the current batch
         if (cli_state & sensor::LIDAR_DATA) {
             if (!sensor::read_lidar_packet(*m_handle, pkt_buffer.get(), pkt_format)) {
-                {
-                    throw std::runtime_error(
-                        "Failed to read a packet of the expected size!");
-                }
+                throw std::runtime_error("Failed to read a packet of the expected size!");
             }
             if (batch_to_scan(pkt_buffer.get(), scan)) {
                 if (scan.complete(m_metadata.format.column_window)) {
