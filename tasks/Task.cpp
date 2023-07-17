@@ -120,11 +120,11 @@ void Task::convertData(LidarScan& scan)
     auto width = m_metadata.format.columns_per_frame;
     auto height = m_metadata.format.pixels_per_column;
 
-    depth_map.horizontal_interval.push_back(M_PI * 2.0);
     depth_map.horizontal_interval.push_back(0);
+    depth_map.horizontal_interval.push_back(M_PI * 2.0);
 
-    depth_map.vertical_interval.push_back(22.5 * M_PI / (180.0));
-    depth_map.vertical_interval.push_back(-22.5 * M_PI / (180.0));
+    depth_map.vertical_interval.push_back(-11.25 * M_PI / (180.0));
+    depth_map.vertical_interval.push_back(11.25 * M_PI / (180.0));
 
     depth_map.vertical_size = m_metadata.format.pixels_per_column;
     depth_map.horizontal_size = m_metadata.format.columns_per_frame;
@@ -160,7 +160,6 @@ bool Task::configureLidar()
             LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
             return false;
         }
-        sensor::set_config(sensor_hostname, config, config_flags);
     }
 
     config.udp_port_lidar = lidar_config.udp_port_lidar;
