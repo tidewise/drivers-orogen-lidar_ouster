@@ -34,7 +34,6 @@ bool Task::startHook()
 {
     if (!TaskBase::startHook())
         return false;
-    auto lidar_config = _lidar_config.get();
     m_handle = sensor::init_client(_ip_address.get(), m_data_destination);
     if (!m_handle) {
         throw std::runtime_error("Failed to connect to sensor!");
@@ -109,7 +108,6 @@ void Task::convertData(LidarScan& scan)
 {
 
     base::samples::DepthMap depth_map;
-    // TODO check when the time will be computed
     auto time = base::Time::now();
     depth_map.time = time;
     depth_map.timestamps.push_back(time);
@@ -151,7 +149,6 @@ bool Task::configureLidar()
 
     // you cannot set the udp_dest flag while simultaneously setting
     //  config.udp_dest Will throw an invalid_argument if you do
-    // todo: check this
     if (!lidar_config.udp_dest.empty()) {
         ouster::sensor::sensor_config config;
         config_flags |= ouster::sensor::CONFIG_UDP_DEST_AUTO;
