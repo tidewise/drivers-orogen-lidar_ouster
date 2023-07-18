@@ -21,5 +21,5 @@ task_context "Task" do
     # The sensor output as a depth map
     output_port "depth_map", "/base/samples/DepthMap"
 
-    periodic 0.1
+    periodic 0.05
 end
