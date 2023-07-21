@@ -15,19 +15,27 @@ namespace lidar_ouster {
      * /ouster/types.h and refactored to be used in orogen
      */
     struct SensorConfig {
-        std::string udp_dest; ///< The destination address for the
-                              ///< lidar and imu data to be sent to
-        int udp_port_lidar;   ///< The destination port for the lidar data
-                              ///< to be sent to
-        int udp_port_imu;     ///< The destination port for the imu data to be sent to
+        /**
+         * The destination address for the lidar and imu data to be sent to
+         */
+        std::string udp_dest;
 
-        // TODO: replace ts_mode and ld_mode when timestamp_mode and
-        // lidar_mode get changed to CapsCase
+        /**
+         * The destination port for the lidar data to be sent to
+         * Set 0 to detect automatically
+         */
+        int udp_port_lidar = 0;
+
+        /**
+         * The destination port for the imu data to be sent to
+         * Set 0 to detect automatically
+         */
+        int udp_port_imu = 0;
+
         /**
          * The timestamp mode for the sensor to use.
          * Refer to timestamp_mode for more details.
          */
-
         ouster::sensor::timestamp_mode ts_mode = ouster::sensor::timestamp_mode::TIME_FROM_INTERNAL_OSC;
 
         /**
@@ -51,9 +59,8 @@ namespace lidar_ouster {
         /**
          * The azimuth window for the sensor to use.
          * Refer to AzimuthWindow for more details.
-
-         Originally the Azimuth_window is ouster::sensor::AzimuthWindow type. However it
-         depens on std::pair witch is not availabe at orogen.
+         * Originally the Azimuth_window is ouster::sensor::AzimuthWindow type. 
+         * However it depens on std::pair witch is not availabe at orogen.       
          */
         int azimuth_window[2];
 
