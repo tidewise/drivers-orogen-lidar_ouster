@@ -43,6 +43,8 @@ argument.
         std::shared_ptr<ouster::sensor::client> m_handle;
         ouster::sensor::sensor_info m_metadata;
         std::string m_sensor_hostname;
+        std::unique_ptr<ouster::ScanBatcher> m_scan_batcher;
+        std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
 
     public:
         /** TaskContext constructor for Task

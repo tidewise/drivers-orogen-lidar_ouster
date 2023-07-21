@@ -39,6 +39,9 @@ bool Task::startHook()
         throw std::runtime_error("Failed to connect to sensor!");
     }
     m_metadata = getMetadata();
+    m_packet_format.reset(new sensor::packet_format(sensor::get_format(m_metadata)));
+    // A ScanBatcher can be used to batch packets into scans
+    m_scan_batcher.reset(new ScanBatcher(m_metadata.format.columns_per_frame, *m_packet_format));
     return true;
 }
 void Task::updateHook()
@@ -82,10 +85,6 @@ LidarScan Task::acquireData()
 
     base::samples::IMUSensors imu_samples;
 
-    // A ScanBatcher can be used to batch packets into scans
-    sensor::packet_format pkt_format = sensor::get_format(m_metadata);
-    ScanBatcher batch_to_scan(m_metadata.format.columns_per_frame, pkt_format);
-
     // buffer to store raw packet data
     auto pkt_buffer = std::make_unique<uint8_t[]>(m_udp_buf_size);
     bool complete = false;
@@ -98,17 +97,17 @@ LidarScan Task::acquireData()
 
         // check for lidar data, read a packet and add it to the current batch
         if (cli_state & sensor::LIDAR_DATA) {
-            if (!sensor::read_lidar_packet(*m_handle, pkt_buffer.get(), pkt_format)) {
+            if (!sensor::read_lidar_packet(*m_handle, pkt_buffer.get(), *m_packet_format)) {
                 throw std::runtime_error("Failed to read a packet of the expected size!");
             }
-            if (batch_to_scan(pkt_buffer.get(), scan)) {
+            if ((*m_scan_batcher)(pkt_buffer.get(), scan)) {
                 if (scan.complete(m_metadata.format.column_window)) {
                     complete = true;
                 }
             }
         }
         if (cli_state & sensor::IMU_DATA) {
-            sensor::read_imu_packet(*m_handle, pkt_buffer.get(), pkt_format);
+            sensor::read_imu_packet(*m_handle, pkt_buffer.get(), *m_packet_format);
             float acc_x, acc_y, acc_z, av_x, av_y, av_z;
             memcpy(&acc_x, pkt_buffer.get() + 24, sizeof(float));
             memcpy(&acc_y, pkt_buffer.get() + 28, sizeof(float));
