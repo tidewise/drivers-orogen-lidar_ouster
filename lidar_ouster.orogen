@@ -21,5 +21,8 @@ task_context "Task" do
     # The sensor output as a depth map
     output_port "depth_map", "/base/samples/DepthMap"
 
+    # The IMU samples data
+    output_port "imu_samples", "base/samples/IMUSensors"
+
     periodic 0.05
 end

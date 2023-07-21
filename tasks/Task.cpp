@@ -80,14 +80,16 @@ LidarScan Task::acquireData()
     // A LidarScan holds lidar data for an entire rotation of the device
     LidarScan scan{width, heigth, m_metadata.format.udp_profile_lidar};
 
+    base::samples::IMUSensors imu_samples;
+
     // A ScanBatcher can be used to batch packets into scans
     sensor::packet_format pkt_format = sensor::get_format(m_metadata);
     ScanBatcher batch_to_scan(m_metadata.format.columns_per_frame, pkt_format);
 
     // buffer to store raw packet data
     auto pkt_buffer = std::make_unique<uint8_t[]>(m_udp_buf_size);
-    bool status = false;
-    while (!status) {
+    bool complete = false;
+    while (!complete) {
         sensor::client_state cli_state = sensor::poll_client(*m_handle);
         // check for error status
         if (cli_state & sensor::CLIENT_ERROR) {
@@ -101,12 +103,23 @@ LidarScan Task::acquireData()
             }
             if (batch_to_scan(pkt_buffer.get(), scan)) {
                 if (scan.complete(m_metadata.format.column_window)) {
-                    status = true;
+                    complete = true;
                 }
             }
         }
         if (cli_state & sensor::IMU_DATA) {
             sensor::read_imu_packet(*m_handle, pkt_buffer.get(), pkt_format);
+            float acc_x, acc_y, acc_z, av_x, av_y, av_z;
+            memcpy(&acc_x, pkt_buffer.get() + 24, sizeof(float));
+            memcpy(&acc_y, pkt_buffer.get() + 28, sizeof(float));
+            memcpy(&acc_z, pkt_buffer.get() + 32, sizeof(float));
+            memcpy(&av_x, pkt_buffer.get() + 36, sizeof(float));
+            memcpy(&av_y, pkt_buffer.get() + 40, sizeof(float));
+            memcpy(&av_z, pkt_buffer.get() + 44, sizeof(float));
+            imu_samples.acc << acc_x * 9.8, acc_y * 9.8, acc_z * 9.8;
+            imu_samples.gyro << av_x * M_PI / 180, av_y * M_PI / 180, av_z * M_PI / 180;
+            imu_samples.time = base::Time::now();
+            _imu_samples.write(imu_samples);
         }
     }
     return scan;
