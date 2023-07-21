@@ -42,6 +42,7 @@ argument.
         const std::string m_data_destination = "";
         std::shared_ptr<ouster::sensor::client> m_handle;
         ouster::sensor::sensor_info m_metadata;
+        std::string m_sensor_hostname;
 
     public:
         /** TaskContext constructor for Task

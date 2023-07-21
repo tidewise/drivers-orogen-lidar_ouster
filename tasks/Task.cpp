@@ -54,6 +54,11 @@ void Task::errorHook()
 void Task::stopHook()
 {
     TaskBase::stopHook();
+    ouster::sensor::sensor_config config;
+    config.operating_mode = ouster::sensor::OperatingMode::OPERATING_STANDBY;
+    if (!sensor::set_config(m_sensor_hostname, config, 0)) {
+        LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
+    }
     m_handle.reset();
 }
 void Task::cleanupHook()
@@ -145,7 +150,7 @@ void Task::convertData(LidarScan& scan)
 bool Task::configureLidar()
 {
     uint8_t config_flags = 0;
-    auto sensor_hostname = _ip_address.get();
+    m_sensor_hostname = _ip_address.get();
     auto lidar_config = _lidar_config.get();
 
     ouster::sensor::sensor_config config;
@@ -156,7 +161,7 @@ bool Task::configureLidar()
         ouster::sensor::sensor_config config;
         config_flags |= ouster::sensor::CONFIG_UDP_DEST_AUTO;
         config.udp_dest = lidar_config.udp_dest;
-        if (!sensor::set_config(sensor_hostname, config, config_flags)) {
+        if (!sensor::set_config(m_sensor_hostname, config, config_flags)) {
             LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
             return false;
         }
@@ -186,7 +191,7 @@ bool Task::configureLidar()
     config.udp_profile_lidar = lidar_config.udp_profile_lidar;
     config.udp_profile_imu = lidar_config.udp_profile_imu;
 
-    if (!sensor::set_config(sensor_hostname, config, config_flags)) {
+    if (!sensor::set_config(m_sensor_hostname, config, config_flags)) {
         LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
         return false;
     }
