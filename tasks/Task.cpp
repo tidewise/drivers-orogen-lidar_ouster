@@ -100,6 +100,9 @@ LidarScan Task::acquireData()
                 }
             }
         }
+        if (cli_state & sensor::IMU_DATA) {
+            sensor::read_imu_packet(*m_handle, pkt_buffer.get(), pkt_format);
+        }
     }
     return scan;
 }
