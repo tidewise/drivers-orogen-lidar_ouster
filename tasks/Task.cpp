@@ -28,16 +28,16 @@ bool Task::configureHook()
     if (!configureLidar()) {
         return false;
     }
+    m_handle = sensor::init_client(_ip_address.get(), m_data_destination);
+    if (!m_handle) {
+        throw std::runtime_error("Failed to connect to sensor!");
+    }
     return true;
 }
 bool Task::startHook()
 {
     if (!TaskBase::startHook())
         return false;
-    m_handle = sensor::init_client(_ip_address.get(), m_data_destination);
-    if (!m_handle) {
-        throw std::runtime_error("Failed to connect to sensor!");
-    }
     m_metadata = getMetadata();
     m_packet_format.reset(new sensor::packet_format(sensor::get_format(m_metadata)));
     // A ScanBatcher can be used to batch packets into scans
