@@ -45,7 +45,7 @@ argument.
         std::string m_sensor_hostname;
         std::unique_ptr<ouster::ScanBatcher> m_scan_batcher;
         std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
-        double m_vertical_fov = 22.5;
+        double m_vertical_fov = 0.0;
 
     public:
         /** TaskContext constructor for Task
@@ -120,7 +120,8 @@ argument.
         bool configureLidar();
         ouster::sensor::sensor_info getMetadata();
         ouster::LidarScan acquireData();
-        void convertData(ouster::LidarScan& scan);
+        void convertDataAndWriteOutput(ouster::LidarScan& scan);
+        void writeIMUSample(std::unique_ptr<uint8_t[]> const& pkt_buffer);
     };
 }
 
