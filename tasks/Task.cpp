@@ -158,11 +158,33 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
 
     auto img = scan.field(sensor::ChanField::RANGE);
     auto data = destagger<uint32_t>(img, m_metadata.format.pixel_shift_by_row);
-
     depth_map.distances.resize(data.rows() * data.cols());
-    for (unsigned int h = 0; h < height; h++) {
-        for (unsigned int w = 0; w < width; w++) {
-            depth_map.distances[h * width + w] = static_cast<double>(data(h, w)) / 1000.0;
+    if (_2d_representation.get()) {
+        std::vector<base::Angle> vertical_angles(height);
+        double resolution =
+            (depth_map.vertical_interval.back() - depth_map.vertical_interval.front()) /
+            (double)(depth_map.vertical_size - 1);
+        for (unsigned v = 0; v < depth_map.vertical_size; v++) {
+            vertical_angles[v] = base::Angle::fromRad(
+                depth_map.vertical_interval.front() + ((double)v * resolution));
+        }
+        depth_map.vertical_interval.clear();
+        depth_map.vertical_interval.push_back(0);
+
+        for (unsigned int h = 0; h < height; h++) {
+            for (unsigned int w = 0; w < width; w++) {
+                depth_map.distances[h * width + w] =
+                    (static_cast<double>(data(h, w)) / 1000.0) *
+                    cos(vertical_angles[h].rad);
+            }
+        }
+    }
+    else {
+        for (unsigned int h = 0; h < height; h++) {
+            for (unsigned int w = 0; w < width; w++) {
+                depth_map.distances[h * width + w] =
+                    static_cast<double>(data(h, w)) / 1000.0;
+            }
         }
     }
     _depth_map.write(depth_map);

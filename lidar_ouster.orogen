@@ -15,6 +15,11 @@ task_context "Task" do
     # The sensor hostname
     property "ip_address", "/std/string"
 
+    # Property to define if the depth map will be represented in 3D or 2D
+    # If true the depth map will be outputed in 2D representation (bird's eye view)
+    # If false the depth map will be outputed in 3D representation
+    property "2d_representation", "bool"
+
     # The sensor vertical field of view in degrees
     property "vertical_fov", "double"
 
