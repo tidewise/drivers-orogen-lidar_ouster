@@ -45,6 +45,7 @@ argument.
         std::string m_sensor_hostname;
         std::unique_ptr<ouster::ScanBatcher> m_scan_batcher;
         std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
+        double m_vertical_fov = 22.5;
 
     public:
         /** TaskContext constructor for Task

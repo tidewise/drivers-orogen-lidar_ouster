@@ -32,6 +32,7 @@ bool Task::configureHook()
     if (!m_handle) {
         throw std::runtime_error("Failed to connect to sensor!");
     }
+    m_vertical_fov = _vertical_fov.get();
     return true;
 }
 bool Task::startHook()
@@ -141,8 +142,8 @@ void Task::convertData(LidarScan& scan)
     depth_map.horizontal_interval.push_back(M_PI * 2.0);
     depth_map.horizontal_interval.push_back(0);
 
-    depth_map.vertical_interval.push_back(-11.25 * M_PI / (180.0));
-    depth_map.vertical_interval.push_back(11.25 * M_PI / (180.0));
+    depth_map.vertical_interval.push_back(-(m_vertical_fov / 2) * M_PI / (180.0));
+    depth_map.vertical_interval.push_back((m_vertical_fov / 2) * M_PI / (180.0));
 
     depth_map.vertical_size = m_metadata.format.pixels_per_column;
     depth_map.horizontal_size = m_metadata.format.columns_per_frame;

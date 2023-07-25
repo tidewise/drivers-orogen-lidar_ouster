@@ -15,6 +15,9 @@ task_context "Task" do
     # The sensor hostname
     property "ip_address", "/std/string"
 
+    # The sensor vertical field of view in degrees
+    property "vertical_fov", "double"
+
     # The parameters to configure the sensor
     property "lidar_config", "lidar_ouster/SensorConfig"
 
