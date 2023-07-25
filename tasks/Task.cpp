@@ -64,11 +64,11 @@ void Task::stopHook()
     if (!sensor::set_config(m_sensor_hostname, config, 0)) {
         LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
     }
-    m_handle.reset();
 }
 void Task::cleanupHook()
 {
     TaskBase::cleanupHook();
+    m_handle.reset();
 }
 
 sensor::sensor_info Task::getMetadata()
@@ -79,11 +79,10 @@ sensor::sensor_info Task::getMetadata()
 
 LidarScan Task::acquireData()
 {
-    size_t width = m_metadata.format.columns_per_frame;
-    size_t heigth = m_metadata.format.pixels_per_column;
-
     // A LidarScan holds lidar data for an entire rotation of the device
-    LidarScan scan{width, heigth, m_metadata.format.udp_profile_lidar};
+    LidarScan scan{m_metadata.format.columns_per_frame,
+        m_metadata.format.pixels_per_column,
+        m_metadata.format.udp_profile_lidar};
 
     // buffer to store raw packet data
     auto pkt_buffer = std::make_unique<uint8_t[]>(m_udp_buf_size);
