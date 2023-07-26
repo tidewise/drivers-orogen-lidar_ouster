@@ -3,14 +3,23 @@
 #ifndef LIDAR_OUSTER_TASK_TASK_HPP
 #define LIDAR_OUSTER_TASK_TASK_HPP
 
-#include "lidar_ouster/TaskBase.hpp"
+#include <lidar_ouster/TaskBase.hpp>
+#include <string>
+#include <base/samples/DepthMap.hpp>
+#include <ouster/client.h>
+#include <ouster/impl/build.h>
+#include <ouster/lidar_scan.h>
+#include <ouster/types.h>
 
-namespace lidar_ouster{
+namespace lidar_ouster {
 
     /*! \class Task
-     * \brief The task context provides and requires services. It uses an ExecutionEngine to perform its functions.
-     * Essential interfaces are operations, data flow ports and properties. These interfaces have been defined using the oroGen specification.
-     * In order to modify the interfaces you should (re)use oroGen and rely on the associated workflow.
+     * \brief The task context provides and requires services. It uses an ExecutionEngine
+to perform its functions.
+     * Essential interfaces are operations, data flow ports and properties. These
+interfaces have been defined using the oroGen specification.
+     * In order to modify the interfaces you should (re)use oroGen and rely on the
+associated workflow.
      * Declare a new task context (i.e., a component)
 
 The corresponding C++ class can be edited in tasks/Task.hpp and
@@ -22,25 +31,33 @@ tasks/Task.cpp, and will be put in the lidar_ouster namespace.
          task('custom_task_name','lidar_ouster::Task')
      end
      \endverbatim
-     *  It can be dynamically adapted when the deployment is called with a prefix argument.
+     *  It can be dynamically adapted when the deployment is called with a prefix
+argument.
      */
-    class Task : public TaskBase
-    {
-	friend class TaskBase;
-    protected:
+    class Task : public TaskBase {
+        friend class TaskBase;
 
-
+    private:
+        const size_t m_udp_buf_size = 65536;
+        const std::string m_data_destination = "";
+        std::shared_ptr<ouster::sensor::client> m_handle;
+        ouster::sensor::sensor_info m_metadata;
+        std::string m_sensor_hostname;
+        std::unique_ptr<ouster::ScanBatcher> m_scan_batcher;
+        std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
+        double m_vertical_fov = 0.0;
 
     public:
         /** TaskContext constructor for Task
-         * \param name Name of the task. This name needs to be unique to make it identifiable via nameservices.
-         * \param initial_state The initial TaskState of the TaskContext. Default is Stopped state.
+         * \param name Name of the task. This name needs to be unique to make it
+         * identifiable via nameservices. \param initial_state The initial TaskState of
+         * the TaskContext. Default is Stopped state.
          */
         Task(std::string const& name = "lidar_ouster::Task");
 
         /** Default deconstructor of Task
          */
-	~Task();
+        ~Task();
 
         /** This hook is called by Orocos when the state machine transitions
          * from PreOperational to Stopped. If it returns false, then the
@@ -99,8 +116,13 @@ tasks/Task.cpp, and will be put in the lidar_ouster namespace.
          * before calling start() again.
          */
         void cleanupHook();
+
+        bool configureLidar();
+        ouster::sensor::sensor_info getMetadata();
+        ouster::LidarScan acquireData();
+        void convertDataAndWriteOutput(ouster::LidarScan& scan);
+        void writeIMUSample(std::unique_ptr<uint8_t[]> const& pkt_buffer);
     };
 }
 
 #endif
-
