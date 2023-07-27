@@ -156,13 +156,31 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     depth_map.vertical_size = m_metadata.format.pixels_per_column;
     depth_map.horizontal_size = m_metadata.format.columns_per_frame;
 
-    auto img = scan.field(sensor::ChanField::RANGE);
-    auto data = destagger<uint32_t>(img, m_metadata.format.pixel_shift_by_row);
-
-    depth_map.distances.resize(data.rows() * data.cols());
+    auto range = scan.field(sensor::ChanField::RANGE);
+    auto range_destaggered =
+        destagger<uint32_t>(range, m_metadata.format.pixel_shift_by_row);
+    Eigen::Array<uint32_t, -1, -1, Eigen::RowMajor> reflectivity;
+    if (m_metadata.format.udp_profile_lidar ==
+        sensor::UDPProfileLidar::PROFILE_LIDAR_LEGACY) {
+        reflectivity = scan.field(sensor::ChanField::REFLECTIVITY);
+    }
+    else if (m_metadata.format.udp_profile_lidar ==
+             sensor::UDPProfileLidar::PROFILE_RNG19_RFL8_SIG16_NIR16_DUAL) {
+        reflectivity =
+            scan.field<uint8_t>(sensor::ChanField::REFLECTIVITY).cast<uint32_t>();
+    }
+    else { // legacy or single return profile
+        reflectivity =
+            scan.field<uint16_t>(sensor::ChanField::REFLECTIVITY).cast<uint32_t>();
+    }
+    auto reflectivity_destaggered =
+        destagger<uint32_t>(reflectivity, m_metadata.format.pixel_shift_by_row);
+    depth_map.distances.resize(range_destaggered.rows() * range_destaggered.cols());
+    depth_map.remissions.resize(range_destaggered.rows() * range_destaggered.cols());
     for (unsigned int h = 0; h < height; h++) {
         for (unsigned int w = 0; w < width; w++) {
-            depth_map.distances[h * width + w] = static_cast<double>(data(h, w)) / 1000.0;
+            depth_map.distances[h * width + w] = static_cast<double>(range_destaggered(h, w)) / 1000.0;
+            depth_map.remissions[h * width + w] = static_cast<double>(reflectivity_destaggered(h, w));
         }
     }
     _depth_map.write(depth_map);
