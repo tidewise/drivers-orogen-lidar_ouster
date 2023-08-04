@@ -86,8 +86,7 @@ LidarScan Task::acquireData()
 
     // buffer to store raw packet data
     auto pkt_buffer = std::make_unique<uint8_t[]>(m_udp_buf_size);
-    bool complete = false;
-    while (!complete) {
+    while (true) {
         sensor::client_state cli_state = sensor::poll_client(*m_handle);
         // check for error status
         if (cli_state & sensor::CLIENT_ERROR) {
@@ -103,7 +102,7 @@ LidarScan Task::acquireData()
             }
             if ((*m_scan_batcher)(pkt_buffer.get(), scan)) {
                 if (scan.complete(m_metadata.format.column_window)) {
-                    complete = true;
+                    return scan;
                 }
             }
         }
@@ -112,7 +111,6 @@ LidarScan Task::acquireData()
             writeIMUSample(pkt_buffer);
         }
     }
-    return scan;
 }
 
 void Task::writeIMUSample(std::unique_ptr<uint8_t[]> const& pkt_buffer)
