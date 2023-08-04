@@ -47,6 +47,7 @@ argument.
         std::unique_ptr<ouster::ScanBatcher> m_scan_batcher;
         std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
         double m_vertical_fov = 0.0;
+        base::samples::DepthMap m_depth_map;
 
     public:
         /** TaskContext constructor for Task
@@ -124,6 +125,7 @@ argument.
         void convertDataAndWriteOutput(ouster::LidarScan& scan);
         void writeIMUSample(std::vector<uint8_t>& pkt_buffer);
         ouster::img_t<uint8_t> getReflectivity(ouster::LidarScan const& scan);
+        void configureDepthMap();
     };
 }
 

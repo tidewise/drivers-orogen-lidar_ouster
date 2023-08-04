@@ -16,9 +16,25 @@ Task::~Task()
 {
 }
 
-/// The following lines are template definitions for the various state machine
-// hooks defined by Orocos::RTT. See Task.hpp for more detailed
-// documentation about them.
+void Task::configureDepthMap()
+{
+    m_depth_map.vertical_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
+    m_depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
+
+    m_depth_map.horizontal_interval.push_back(M_PI * 2.0);
+    m_depth_map.horizontal_interval.push_back(0);
+
+    m_depth_map.vertical_interval.push_back(-(m_vertical_fov / 2) * M_PI / (180.0));
+    m_depth_map.vertical_interval.push_back((m_vertical_fov / 2) * M_PI / (180.0));
+
+    m_depth_map.vertical_size = m_metadata.format.pixels_per_column;
+    m_depth_map.horizontal_size = m_metadata.format.columns_per_frame;
+
+    m_depth_map.distances.resize(
+        m_metadata.format.pixels_per_column * m_metadata.format.pixels_per_column);
+    m_depth_map.remissions.resize(
+        m_metadata.format.pixels_per_column * m_metadata.format.pixels_per_column);
+}
 
 bool Task::configureHook()
 {
@@ -41,6 +57,7 @@ bool Task::startHook()
     if (!TaskBase::startHook())
         return false;
     m_metadata = getMetadata();
+    configureDepthMap();
     m_packet_format.reset(new sensor::packet_format(sensor::get_format(m_metadata)));
     // A ScanBatcher can be used to batch packets into scans
     m_scan_batcher.reset(
@@ -132,23 +149,9 @@ void Task::writeIMUSample(std::vector<uint8_t>& m_packet_buffer)
 
 void Task::convertDataAndWriteOutput(LidarScan& scan)
 {
-
-    base::samples::DepthMap depth_map;
     auto time = base::Time::now();
-    depth_map.time = time;
-    depth_map.timestamps.push_back(time);
-
-    depth_map.vertical_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
-    depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
-
-    depth_map.horizontal_interval.push_back(M_PI * 2.0);
-    depth_map.horizontal_interval.push_back(0);
-
-    depth_map.vertical_interval.push_back(-(m_vertical_fov / 2) * M_PI / (180.0));
-    depth_map.vertical_interval.push_back((m_vertical_fov / 2) * M_PI / (180.0));
-
-    depth_map.vertical_size = m_metadata.format.pixels_per_column;
-    depth_map.horizontal_size = m_metadata.format.columns_per_frame;
+    m_depth_map.time = time;
+    m_depth_map.timestamps.push_back(time);
 
     auto range = scan.field(sensor::ChanField::RANGE);
     auto range_destaggered =
@@ -158,19 +161,20 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
 
     auto width = m_metadata.format.columns_per_frame;
     auto height = m_metadata.format.pixels_per_column;
-
-    depth_map.distances.resize(range_destaggered.rows() * range_destaggered.cols());
-    depth_map.remissions.resize(range_destaggered.rows() * range_destaggered.cols());
+    m_depth_map.distances.clear();
+    m_depth_map.remissions.clear();
+    m_depth_map.distances.resize(range_destaggered.rows() * range_destaggered.cols());
+    m_depth_map.remissions.resize(range_destaggered.rows() * range_destaggered.cols());
     for (unsigned int h = 0; h < height; h++) {
         for (unsigned int w = 0; w < width; w++) {
             unsigned int index = h * width + w;
-            depth_map.distances[index] =
+            m_depth_map.distances[index] =
                 static_cast<double>(range_destaggered(h, w)) / 1000.0;
-            depth_map.remissions[index] =
+            m_depth_map.remissions[index] =
                 static_cast<double>(reflectivity_destaggered(h, w));
         }
     }
-    _depth_map.write(depth_map);
+    _depth_map.write(m_depth_map);
 }
 
 ouster::img_t<uint8_t> Task::getReflectivity(ouster::LidarScan const& scan)
