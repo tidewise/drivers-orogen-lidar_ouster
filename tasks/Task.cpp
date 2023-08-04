@@ -144,9 +144,6 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     depth_map.vertical_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
     depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
 
-    auto width = m_metadata.format.columns_per_frame;
-    auto height = m_metadata.format.pixels_per_column;
-
     depth_map.horizontal_interval.push_back(M_PI * 2.0);
     depth_map.horizontal_interval.push_back(0);
 
@@ -159,6 +156,28 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     auto range = scan.field(sensor::ChanField::RANGE);
     auto range_destaggered =
         destagger<uint32_t>(range, m_metadata.format.pixel_shift_by_row);
+
+    auto reflectivity_destaggered = getReflectivity(scan);
+
+    auto width = m_metadata.format.columns_per_frame;
+    auto height = m_metadata.format.pixels_per_column;
+
+    depth_map.distances.resize(range_destaggered.rows() * range_destaggered.cols());
+    depth_map.remissions.resize(range_destaggered.rows() * range_destaggered.cols());
+    for (unsigned int h = 0; h < height; h++) {
+        for (unsigned int w = 0; w < width; w++) {
+            unsigned int index = h * width + w;
+            depth_map.distances[index] =
+                static_cast<double>(range_destaggered(h, w)) / 1000.0;
+            depth_map.remissions[index] =
+                static_cast<double>(reflectivity_destaggered(h, w));
+        }
+    }
+    _depth_map.write(depth_map);
+}
+
+ouster::img_t<uint32_t> Task::getReflectivity(ouster::LidarScan const& scan)
+{
     Eigen::Array<uint32_t, -1, -1, Eigen::RowMajor> reflectivity;
     if (m_metadata.format.udp_profile_lidar ==
         sensor::UDPProfileLidar::PROFILE_LIDAR_LEGACY) {
@@ -175,15 +194,7 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     }
     auto reflectivity_destaggered =
         destagger<uint32_t>(reflectivity, m_metadata.format.pixel_shift_by_row);
-    depth_map.distances.resize(range_destaggered.rows() * range_destaggered.cols());
-    depth_map.remissions.resize(range_destaggered.rows() * range_destaggered.cols());
-    for (unsigned int h = 0; h < height; h++) {
-        for (unsigned int w = 0; w < width; w++) {
-            depth_map.distances[h * width + w] = static_cast<double>(range_destaggered(h, w)) / 1000.0;
-            depth_map.remissions[h * width + w] = static_cast<double>(reflectivity_destaggered(h, w));
-        }
-    }
-    _depth_map.write(depth_map);
+    return reflectivity_destaggered;
 }
 
 bool Task::configureLidar()
