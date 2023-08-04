@@ -170,8 +170,13 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
             unsigned int index = h * width + w;
             m_depth_map.distances[index] =
                 static_cast<double>(range_destaggered(h, w)) / 1000.0;
-            m_depth_map.remissions[index] =
-                static_cast<double>(reflectivity_destaggered(h, w));
+            if (reflectivity_destaggered(h, w) <= 100) {
+                m_depth_map.remissions[index] =
+                    static_cast<double>(reflectivity_destaggered(h, w) / 100.0);
+            }
+            else {
+                m_depth_map.remissions[index] = 1;
+            }
         }
     }
     _depth_map.write(m_depth_map);
