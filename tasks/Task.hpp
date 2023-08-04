@@ -39,6 +39,7 @@ argument.
 
     private:
         const size_t m_udp_buf_size = 65536;
+        std::vector<uint8_t> m_packet_buffer;
         const std::string m_data_destination = "";
         std::shared_ptr<ouster::sensor::client> m_handle;
         ouster::sensor::sensor_info m_metadata;
@@ -121,7 +122,7 @@ argument.
         ouster::sensor::sensor_info getMetadata();
         ouster::LidarScan acquireData();
         void convertDataAndWriteOutput(ouster::LidarScan& scan);
-        void writeIMUSample(std::unique_ptr<uint8_t[]> const& pkt_buffer);
+        void writeIMUSample(std::vector<uint8_t> const& pkt_buffer);
         ouster::img_t<uint8_t> getReflectivity(ouster::LidarScan const& scan);
     };
 }

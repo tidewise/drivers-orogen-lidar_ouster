@@ -32,6 +32,7 @@ bool Task::configureHook()
     if (!m_handle) {
         throw std::runtime_error("Failed to connect to sensor!");
     }
+    m_packet_buffer.resize(m_udp_buf_size);
     m_vertical_fov = _vertical_fov.get();
     return true;
 }
@@ -84,8 +85,6 @@ LidarScan Task::acquireData()
         m_metadata.format.pixels_per_column,
         m_metadata.format.udp_profile_lidar};
 
-    // buffer to store raw packet data
-    auto pkt_buffer = std::make_unique<uint8_t[]>(m_udp_buf_size);
     while (true) {
         sensor::client_state cli_state = sensor::poll_client(*m_handle);
         // check for error status
@@ -96,34 +95,34 @@ LidarScan Task::acquireData()
         // check for lidar data, read a packet and add it to the current batch
         if (cli_state & sensor::LIDAR_DATA) {
             if (!sensor::read_lidar_packet(*m_handle,
-                    pkt_buffer.get(),
+                    m_packet_buffer.data(),
                     *m_packet_format)) {
                 throw std::runtime_error("Failed to read a packet of the expected size!");
             }
-            if ((*m_scan_batcher)(pkt_buffer.get(), scan)) {
+            if ((*m_scan_batcher)(m_packet_buffer.data(), scan)) {
                 if (scan.complete(m_metadata.format.column_window)) {
                     return scan;
                 }
             }
         }
         if (cli_state & sensor::IMU_DATA) {
-            sensor::read_imu_packet(*m_handle, pkt_buffer.get(), *m_packet_format);
-            writeIMUSample(pkt_buffer);
+            sensor::read_imu_packet(*m_handle, m_packet_buffer.data(), *m_packet_format);
+            writeIMUSample(m_packet_buffer);
         }
     }
 }
 
-void Task::writeIMUSample(std::unique_ptr<uint8_t[]> const& pkt_buffer)
+void Task::writeIMUSample(std::vector<uint8_t> const& m_packet_buffer)
 {
     base::samples::IMUSensors imu_samples;
     float acceleration_x, acceleration_y, acceleration_z, angular_velocity_x,
         angular_velocity_y, angular_velocity_z;
-    memcpy(&acceleration_x, pkt_buffer.get() + 24, sizeof(float));
-    memcpy(&acceleration_y, pkt_buffer.get() + 28, sizeof(float));
-    memcpy(&acceleration_z, pkt_buffer.get() + 32, sizeof(float));
-    memcpy(&angular_velocity_x, pkt_buffer.get() + 36, sizeof(float));
-    memcpy(&angular_velocity_y, pkt_buffer.get() + 40, sizeof(float));
-    memcpy(&angular_velocity_z, pkt_buffer.get() + 44, sizeof(float));
+    memcpy(&acceleration_x, m_packet_buffer.data() + 24, sizeof(float));
+    memcpy(&acceleration_y, m_packet_buffer.data() + 28, sizeof(float));
+    memcpy(&acceleration_z, m_packet_buffer.data() + 32, sizeof(float));
+    memcpy(&angular_velocity_x, m_packet_buffer.data() + 36, sizeof(float));
+    memcpy(&angular_velocity_y, m_packet_buffer.data() + 40, sizeof(float));
+    memcpy(&angular_velocity_z, m_packet_buffer.data() + 44, sizeof(float));
     imu_samples.acc << acceleration_x * 9.8, acceleration_y * 9.8, acceleration_z * 9.8;
     imu_samples.gyro << angular_velocity_x * M_PI / 180, angular_velocity_y * M_PI / 180,
         angular_velocity_z * M_PI / 180;
