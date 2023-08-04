@@ -174,25 +174,22 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     _depth_map.write(depth_map);
 }
 
-ouster::img_t<uint32_t> Task::getReflectivity(ouster::LidarScan const& scan)
+ouster::img_t<uint8_t> Task::getReflectivity(ouster::LidarScan const& scan)
 {
-    Eigen::Array<uint32_t, -1, -1, Eigen::RowMajor> reflectivity;
+    Eigen::Array<uint8_t, -1, -1, Eigen::RowMajor> reflectivity;
     if (m_metadata.format.udp_profile_lidar ==
         sensor::UDPProfileLidar::PROFILE_LIDAR_LEGACY) {
-        reflectivity = scan.field(sensor::ChanField::REFLECTIVITY);
+        reflectivity = scan.field(sensor::ChanField::REFLECTIVITY).cast<uint8_t>();
     }
     else if (m_metadata.format.udp_profile_lidar ==
              sensor::UDPProfileLidar::PROFILE_RNG19_RFL8_SIG16_NIR16_DUAL) {
-        reflectivity =
-            scan.field<uint8_t>(sensor::ChanField::REFLECTIVITY).cast<uint32_t>();
+        reflectivity = scan.field<uint8_t>(sensor::ChanField::REFLECTIVITY);
     }
     else { // legacy or single return profile
         reflectivity =
-            scan.field<uint16_t>(sensor::ChanField::REFLECTIVITY).cast<uint32_t>();
+            scan.field<uint16_t>(sensor::ChanField::REFLECTIVITY).cast<uint8_t>();
     }
-    auto reflectivity_destaggered =
-        destagger<uint32_t>(reflectivity, m_metadata.format.pixel_shift_by_row);
-    return reflectivity_destaggered;
+    return destagger<uint8_t>(reflectivity, m_metadata.format.pixel_shift_by_row);
 }
 
 bool Task::configureLidar()
