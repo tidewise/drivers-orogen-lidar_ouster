@@ -122,7 +122,7 @@ argument.
         ouster::sensor::sensor_info getMetadata();
         ouster::LidarScan acquireData();
         void convertDataAndWriteOutput(ouster::LidarScan& scan);
-        void writeIMUSample(std::vector<uint8_t> const& pkt_buffer);
+        void writeIMUSample(std::vector<uint8_t>& pkt_buffer);
         ouster::img_t<uint8_t> getReflectivity(ouster::LidarScan const& scan);
     };
 }

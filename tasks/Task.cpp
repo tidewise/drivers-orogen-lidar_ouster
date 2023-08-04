@@ -112,17 +112,17 @@ LidarScan Task::acquireData()
     }
 }
 
-void Task::writeIMUSample(std::vector<uint8_t> const& m_packet_buffer)
+void Task::writeIMUSample(std::vector<uint8_t>& m_packet_buffer)
 {
     base::samples::IMUSensors imu_samples;
-    float acceleration_x, acceleration_y, acceleration_z, angular_velocity_x,
-        angular_velocity_y, angular_velocity_z;
-    memcpy(&acceleration_x, m_packet_buffer.data() + 24, sizeof(float));
-    memcpy(&acceleration_y, m_packet_buffer.data() + 28, sizeof(float));
-    memcpy(&acceleration_z, m_packet_buffer.data() + 32, sizeof(float));
-    memcpy(&angular_velocity_x, m_packet_buffer.data() + 36, sizeof(float));
-    memcpy(&angular_velocity_y, m_packet_buffer.data() + 40, sizeof(float));
-    memcpy(&angular_velocity_z, m_packet_buffer.data() + 44, sizeof(float));
+    float* data = reinterpret_cast<float*>(m_packet_buffer.data() + 24);
+    float acceleration_x = data[0];
+    float acceleration_y = data[1];
+    float acceleration_z = data[2];
+    float angular_velocity_x = data[3];
+    float angular_velocity_y = data[4];
+    float angular_velocity_z = data[5];
+
     imu_samples.acc << acceleration_x * 9.8, acceleration_y * 9.8, acceleration_z * 9.8;
     imu_samples.gyro << angular_velocity_x * M_PI / 180, angular_velocity_y * M_PI / 180,
         angular_velocity_z * M_PI / 180;
