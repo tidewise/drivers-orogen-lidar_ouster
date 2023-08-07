@@ -72,6 +72,7 @@ describe OroGen.lidar_ouster.Task do
         config.phase_lock_enable = false
         config.phase_lock_offset = 0
         task.properties.lidar_config = config
+        task.properties.remission_enabled = true
         task
     end
     # rubocop: enable Metrics/AbcSize
