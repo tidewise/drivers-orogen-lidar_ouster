@@ -78,16 +78,16 @@ void Task::errorHook()
 void Task::stopHook()
 {
     TaskBase::stopHook();
-    ouster::sensor::sensor_config config;
-    config.operating_mode = ouster::sensor::OperatingMode::OPERATING_STANDBY;
-    if (!sensor::set_config(m_sensor_hostname, config, 0)) {
-        LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
-    }
 }
 void Task::cleanupHook()
 {
     TaskBase::cleanupHook();
     m_handle.reset();
+    ouster::sensor::sensor_config config;
+    config.operating_mode = ouster::sensor::OperatingMode::OPERATING_STANDBY;
+    if (!sensor::set_config(m_sensor_hostname, config, 0)) {
+        LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
+    }
 }
 
 sensor::sensor_info Task::getMetadata()
