@@ -15,6 +15,10 @@ task_context "Task" do
     # The sensor hostname
     property "ip_address", "/std/string"
 
+    # Variable to define if the remission (reflectivity) will be enabled.
+    # If enable_remission is true, the remission will be enabled
+    property "remission_enabled", "bool"
+
     # The sensor vertical field of view in degrees
     property "vertical_fov", "double"
 

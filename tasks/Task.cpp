@@ -50,6 +50,7 @@ bool Task::configureHook()
     }
     m_packet_buffer.resize(m_udp_buf_size);
     m_vertical_fov = _vertical_fov.get();
+    m_remission_enabled = _remission_enabled.get();
     return true;
 }
 bool Task::startHook()
@@ -156,9 +157,10 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     auto range = scan.field(sensor::ChanField::RANGE);
     auto range_destaggered =
         destagger<uint32_t>(range, m_metadata.format.pixel_shift_by_row);
-
-    auto reflectivity_destaggered = getReflectivity(scan);
-
+    ouster::img_t<uint8_t> reflectivity_destaggered;
+    if (m_remission_enabled) {
+        reflectivity_destaggered = getReflectivity(scan);
+    }
     auto width = m_metadata.format.columns_per_frame;
     auto height = m_metadata.format.pixels_per_column;
     m_depth_map.distances.clear();
@@ -170,12 +172,14 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
             unsigned int index = h * width + w;
             m_depth_map.distances[index] =
                 static_cast<double>(range_destaggered(h, w)) / 1000.0;
-            if (reflectivity_destaggered(h, w) <= 100) {
-                m_depth_map.remissions[index] =
-                    static_cast<double>(reflectivity_destaggered(h, w) / 100.0);
-            }
-            else {
-                m_depth_map.remissions[index] = 1;
+            if (m_remission_enabled) {
+                if (reflectivity_destaggered(h, w) <= 100) {
+                    m_depth_map.remissions[index] =
+                        static_cast<double>(reflectivity_destaggered(h, w) / 100.0);
+                }
+                else {
+                    m_depth_map.remissions[index] = 1;
+                }
             }
         }
     }

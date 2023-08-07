@@ -48,6 +48,7 @@ argument.
         std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
         double m_vertical_fov = 0.0;
         base::samples::DepthMap m_depth_map;
+        bool m_remission_enabled = false;
 
     public:
         /** TaskContext constructor for Task
