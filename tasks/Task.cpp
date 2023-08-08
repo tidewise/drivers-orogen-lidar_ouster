@@ -5,9 +5,11 @@
 
 using namespace lidar_ouster;
 using namespace ouster;
+using namespace sensor;
 using namespace std;
+using namespace base::samples;
 
-Task::Task(std::string const& name)
+Task::Task(string const& name)
     : TaskBase(name)
 {
 }
@@ -18,8 +20,8 @@ Task::~Task()
 
 void Task::configureDepthMap()
 {
-    m_depth_map.vertical_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
-    m_depth_map.horizontal_projection = base::samples::DepthMap::PROJECTION_TYPE::POLAR;
+    m_depth_map.vertical_projection = DepthMap::PROJECTION_TYPE::POLAR;
+    m_depth_map.horizontal_projection = DepthMap::PROJECTION_TYPE::POLAR;
 
     m_depth_map.horizontal_interval.push_back(M_PI * 2.0);
     m_depth_map.horizontal_interval.push_back(0);
@@ -44,9 +46,9 @@ bool Task::configureHook()
     if (!configureLidar()) {
         return false;
     }
-    m_handle = sensor::init_client(_ip_address.get(), m_data_destination);
+    m_handle = init_client(_ip_address.get(), m_data_destination);
     if (!m_handle) {
-        throw std::runtime_error("Failed to connect to sensor!");
+        throw runtime_error("Failed to connect to sensor!");
     }
     m_packet_buffer.resize(m_udp_buf_size);
     m_vertical_fov = _vertical_fov.get();
@@ -59,7 +61,7 @@ bool Task::startHook()
         return false;
     m_metadata = getMetadata();
     configureDepthMap();
-    m_packet_format.reset(new sensor::packet_format(sensor::get_format(m_metadata)));
+    m_packet_format.reset(new packet_format(get_format(m_metadata)));
     // A ScanBatcher can be used to batch packets into scans
     m_scan_batcher.reset(
         new ScanBatcher(m_metadata.format.columns_per_frame, *m_packet_format));
@@ -83,17 +85,17 @@ void Task::cleanupHook()
 {
     TaskBase::cleanupHook();
     m_handle.reset();
-    ouster::sensor::sensor_config config;
-    config.operating_mode = ouster::sensor::OperatingMode::OPERATING_STANDBY;
-    if (!sensor::set_config(m_sensor_hostname, config, 0)) {
-        LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
+    sensor_config config;
+    config.operating_mode = OperatingMode::OPERATING_STANDBY;
+    if (!set_config(m_sensor_hostname, config, 0)) {
+        LOG_ERROR_S << "Failed to configure Lidar!" << endl;
     }
 }
 
-sensor::sensor_info Task::getMetadata()
+sensor_info Task::getMetadata()
 {
-    auto metadata = sensor::get_metadata(*m_handle);
-    return sensor::parse_metadata(metadata);
+    auto metadata = get_metadata(*m_handle);
+    return parse_metadata(metadata);
 }
 
 LidarScan Task::acquireData()
@@ -104,18 +106,16 @@ LidarScan Task::acquireData()
         m_metadata.format.udp_profile_lidar};
 
     while (true) {
-        sensor::client_state cli_state = sensor::poll_client(*m_handle);
+        client_state cli_state = poll_client(*m_handle);
         // check for error status
-        if (cli_state & sensor::CLIENT_ERROR) {
-            throw std::runtime_error("Sensor client returned error state!");
+        if (cli_state & CLIENT_ERROR) {
+            throw runtime_error("Sensor client returned error state!");
         }
 
         // check for lidar data, read a packet and add it to the current batch
-        if (cli_state & sensor::LIDAR_DATA) {
-            if (!sensor::read_lidar_packet(*m_handle,
-                    m_packet_buffer.data(),
-                    *m_packet_format)) {
-                throw std::runtime_error("Failed to read a packet of the expected size!");
+        if (cli_state & LIDAR_DATA) {
+            if (!read_lidar_packet(*m_handle, m_packet_buffer.data(), *m_packet_format)) {
+                throw runtime_error("Failed to read a packet of the expected size!");
             }
             if ((*m_scan_batcher)(m_packet_buffer.data(), scan)) {
                 if (scan.complete(m_metadata.format.column_window)) {
@@ -123,16 +123,16 @@ LidarScan Task::acquireData()
                 }
             }
         }
-        if (cli_state & sensor::IMU_DATA) {
-            sensor::read_imu_packet(*m_handle, m_packet_buffer.data(), *m_packet_format);
+        if (cli_state & IMU_DATA) {
+            read_imu_packet(*m_handle, m_packet_buffer.data(), *m_packet_format);
             writeIMUSample(m_packet_buffer);
         }
     }
 }
 
-void Task::writeIMUSample(std::vector<uint8_t>& m_packet_buffer)
+void Task::writeIMUSample(vector<uint8_t>& m_packet_buffer)
 {
-    base::samples::IMUSensors imu_samples;
+    IMUSensors imu_samples;
     float* data = reinterpret_cast<float*>(m_packet_buffer.data() + 24);
     float acceleration_x = data[0];
     float acceleration_y = data[1];
@@ -154,10 +154,10 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     m_depth_map.time = time;
     m_depth_map.timestamps.push_back(time);
 
-    auto range = scan.field(sensor::ChanField::RANGE);
+    auto range = scan.field(ChanField::RANGE);
     auto range_destaggered =
         destagger<uint32_t>(range, m_metadata.format.pixel_shift_by_row);
-    ouster::img_t<uint8_t> reflectivity_destaggered;
+    img_t<uint8_t> reflectivity_destaggered;
     if (m_remission_enabled) {
         reflectivity_destaggered = getReflectivity(scan);
     }
@@ -184,20 +184,18 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
     _depth_map.write(m_depth_map);
 }
 
-ouster::img_t<uint8_t> Task::getReflectivity(ouster::LidarScan const& scan)
+img_t<uint8_t> Task::getReflectivity(LidarScan const& scan)
 {
     Eigen::Array<uint8_t, -1, -1, Eigen::RowMajor> reflectivity;
-    if (m_metadata.format.udp_profile_lidar ==
-        sensor::UDPProfileLidar::PROFILE_LIDAR_LEGACY) {
-        reflectivity = scan.field(sensor::ChanField::REFLECTIVITY).cast<uint8_t>();
+    if (m_metadata.format.udp_profile_lidar == UDPProfileLidar::PROFILE_LIDAR_LEGACY) {
+        reflectivity = scan.field(ChanField::REFLECTIVITY).cast<uint8_t>();
     }
     else if (m_metadata.format.udp_profile_lidar ==
-             sensor::UDPProfileLidar::PROFILE_RNG19_RFL8_SIG16_NIR16_DUAL) {
-        reflectivity = scan.field<uint8_t>(sensor::ChanField::REFLECTIVITY);
+             UDPProfileLidar::PROFILE_RNG19_RFL8_SIG16_NIR16_DUAL) {
+        reflectivity = scan.field<uint8_t>(ChanField::REFLECTIVITY);
     }
     else { // legacy or single return profile
-        reflectivity =
-            scan.field<uint16_t>(sensor::ChanField::REFLECTIVITY).cast<uint8_t>();
+        reflectivity = scan.field<uint16_t>(ChanField::REFLECTIVITY).cast<uint8_t>();
     }
     return destagger<uint8_t>(reflectivity, m_metadata.format.pixel_shift_by_row);
 }
@@ -208,16 +206,16 @@ bool Task::configureLidar()
     m_sensor_hostname = _ip_address.get();
     auto lidar_config = _lidar_config.get();
 
-    ouster::sensor::sensor_config config;
+    sensor_config config;
 
     // you cannot set the udp_dest flag while simultaneously setting
     //  config.udp_dest Will throw an invalid_argument if you do
     if (!lidar_config.udp_dest.empty()) {
-        ouster::sensor::sensor_config config;
-        config_flags |= ouster::sensor::CONFIG_UDP_DEST_AUTO;
+        sensor_config config;
+        config_flags |= CONFIG_UDP_DEST_AUTO;
         config.udp_dest = lidar_config.udp_dest;
-        if (!sensor::set_config(m_sensor_hostname, config, config_flags)) {
-            LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
+        if (!set_config(m_sensor_hostname, config, config_flags)) {
+            LOG_ERROR_S << "Failed to configure Lidar!" << endl;
             return false;
         }
     }
@@ -232,7 +230,7 @@ bool Task::configureLidar()
     config.operating_mode = lidar_config.operating_mode;
     config.multipurpose_io_mode = lidar_config.multipurpose_io_mode;
     config.azimuth_window =
-        std::make_pair(lidar_config.azimuth_window[0], lidar_config.azimuth_window[1]);
+        make_pair(lidar_config.azimuth_window[0], lidar_config.azimuth_window[1]);
     config.signal_multiplier = lidar_config.signal_multiplier;
     config.nmea_in_polarity = lidar_config.nmea_in_polarity;
     config.nmea_ignore_valid_char = lidar_config.nmea_ignore_valid_char;
@@ -249,8 +247,8 @@ bool Task::configureLidar()
     config.udp_profile_lidar = lidar_config.udp_profile_lidar;
     config.udp_profile_imu = lidar_config.udp_profile_imu;
 
-    if (!sensor::set_config(m_sensor_hostname, config, config_flags)) {
-        LOG_ERROR_S << "Failed to configure Lidar!" << std::endl;
+    if (!set_config(m_sensor_hostname, config, config_flags)) {
+        LOG_ERROR_S << "Failed to configure Lidar!" << endl;
         return false;
     }
 
