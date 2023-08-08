@@ -39,6 +39,7 @@ argument.
 
     private:
         const size_t m_udp_buf_size = 65536;
+        std::vector<uint8_t> m_packet_buffer;
         const std::string m_data_destination = "";
         std::shared_ptr<ouster::sensor::client> m_handle;
         ouster::sensor::sensor_info m_metadata;
@@ -46,6 +47,8 @@ argument.
         std::unique_ptr<ouster::ScanBatcher> m_scan_batcher;
         std::unique_ptr<ouster::sensor::packet_format> m_packet_format;
         double m_vertical_fov = 0.0;
+        base::samples::DepthMap m_depth_map;
+        bool m_remission_enabled = false;
 
     public:
         /** TaskContext constructor for Task
@@ -121,7 +124,9 @@ argument.
         ouster::sensor::sensor_info getMetadata();
         ouster::LidarScan acquireData();
         void convertDataAndWriteOutput(ouster::LidarScan& scan);
-        void writeIMUSample(std::unique_ptr<uint8_t[]> const& pkt_buffer);
+        void writeIMUSample(std::vector<uint8_t>& pkt_buffer);
+        ouster::img_t<uint8_t> getReflectivity(ouster::LidarScan const& scan);
+        void configureDepthMap();
     };
 }
 
