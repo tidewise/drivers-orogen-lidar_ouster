@@ -7,6 +7,24 @@ import_types_from "base"
 describe OroGen.lidar_ouster.Task do
     run_live
 
+    it "times out at runtime" do
+        task = create_task
+        task.properties.scan_timeout = Time.at(0.01)
+        syskit_configure(task)
+        expect_execution { task.start! }.to do
+            emit task.start_event
+        end
+        expect_execution.timeout(50).to do
+            emit task.timeout_event
+        end
+    end
+
+    it "times out at configuration" do
+        task = create_task
+        task.properties.first_scan_timeout = Time.at(0.01)
+        expect_execution.scheduler(true).timeout(50).to { fail_to_start task }
+    end
+
     it "starts and outputs sensor data" do
         task = create_configure_and_start_task
         output = expect_execution.timeout(50).to do
@@ -73,6 +91,8 @@ describe OroGen.lidar_ouster.Task do
         config.phase_lock_offset = 0
         task.properties.lidar_config = config
         task.properties.remission_enabled = true
+        task.properties.scan_timeout = Time.at(0.3)
+        task.properties.first_scan_timeout = Time.at(120)
         task
     end
     # rubocop: enable Metrics/AbcSize

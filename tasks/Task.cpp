@@ -7,7 +7,8 @@ using namespace lidar_ouster;
 using namespace ouster;
 using namespace sensor;
 using namespace std;
-using namespace base::samples;
+using namespace base;
+using namespace samples;
 
 Task::Task(string const& name)
     : TaskBase(name)
@@ -50,27 +51,38 @@ bool Task::configureHook()
     if (!m_handle) {
         throw runtime_error("Failed to connect to sensor!");
     }
+    m_scan_timeout = _scan_timeout.get();
+    m_first_scan_timeout = _first_scan_timeout.get();
     m_packet_buffer.resize(m_udp_buf_size);
     m_vertical_fov = _vertical_fov.get();
     m_remission_enabled = _remission_enabled.get();
-    return true;
-}
-bool Task::startHook()
-{
-    if (!TaskBase::startHook())
-        return false;
     m_metadata = getMetadata();
     configureDepthMap();
     m_packet_format.reset(new packet_format(get_format(m_metadata)));
     // A ScanBatcher can be used to batch packets into scans
     m_scan_batcher.reset(
         new ScanBatcher(m_metadata.format.columns_per_frame, *m_packet_format));
+    auto data = acquireData(m_first_scan_timeout);
+    if (!data.complete(m_metadata.format.column_window)) {
+        exception(TIMEOUT);
+        return false;
+    }
+    return true;
+}
+bool Task::startHook()
+{
+    if (!TaskBase::startHook())
+        return false;
     return true;
 }
 void Task::updateHook()
 {
     TaskBase::updateHook();
-    auto data = acquireData();
+    auto data = acquireData(m_scan_timeout);
+    if (!data.complete(m_metadata.format.column_window)) {
+        exception(TIMEOUT);
+        return;
+    }
     convertDataAndWriteOutput(data);
 }
 void Task::errorHook()
@@ -98,14 +110,20 @@ sensor_info Task::getMetadata()
     return parse_metadata(metadata);
 }
 
-LidarScan Task::acquireData()
+LidarScan Task::acquireData(Time const& timeout)
 {
+    Time deadline = timeout + Time::now();
     // A LidarScan holds lidar data for an entire rotation of the device
     LidarScan scan{m_metadata.format.columns_per_frame,
         m_metadata.format.pixels_per_column,
         m_metadata.format.udp_profile_lidar};
 
     while (true) {
+        if (Time::now() > deadline) {
+            LOG_ERROR_S << "The scan acquisition has timed out!";
+            return scan;
+        }
+
         client_state cli_state = poll_client(*m_handle);
         // check for error status
         if (cli_state & CLIENT_ERROR) {
