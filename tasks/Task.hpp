@@ -3,13 +3,13 @@
 #ifndef LIDAR_OUSTER_TASK_TASK_HPP
 #define LIDAR_OUSTER_TASK_TASK_HPP
 
-#include <lidar_ouster/TaskBase.hpp>
-#include <string>
 #include <base/samples/DepthMap.hpp>
+#include <lidar_ouster/TaskBase.hpp>
 #include <ouster/client.h>
 #include <ouster/impl/build.h>
 #include <ouster/lidar_scan.h>
 #include <ouster/types.h>
+#include <string>
 
 namespace lidar_ouster {
 
@@ -49,6 +49,8 @@ argument.
         double m_vertical_fov = 0.0;
         base::samples::DepthMap m_depth_map;
         bool m_remission_enabled = false;
+        base::Time m_first_scan_timeout;
+        base::Time m_scan_timeout;
 
     public:
         /** TaskContext constructor for Task
@@ -122,7 +124,7 @@ argument.
 
         bool configureLidar();
         ouster::sensor::sensor_info getMetadata();
-        ouster::LidarScan acquireData();
+        ouster::LidarScan acquireData(base::Time const& timeout);
         void convertDataAndWriteOutput(ouster::LidarScan& scan);
         void writeIMUSample(std::vector<uint8_t>& pkt_buffer);
         ouster::img_t<uint8_t> getReflectivity(ouster::LidarScan const& scan);

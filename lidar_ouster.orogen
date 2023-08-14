@@ -19,6 +19,12 @@ task_context "Task" do
     # If enable_remission is true, the remission will be enabled
     property "remission_enabled", "bool"
 
+    # The maximum time interval to receive a scan
+    property "scan_timeout", "base/Time"
+
+    # The maximum time interval to receive the first scan
+    property "first_scan_timeout", "base/Time"
+
     # The sensor vertical field of view in degrees
     property "vertical_fov", "double"
 
@@ -30,6 +36,8 @@ task_context "Task" do
 
     # The IMU samples data
     output_port "imu_samples", "base/samples/IMUSensors"
+
+    exception_states "TIMEOUT"
 
     periodic 0.05
 end
