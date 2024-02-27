@@ -92,16 +92,16 @@ void Task::errorHook()
 void Task::stopHook()
 {
     TaskBase::stopHook();
-}
-void Task::cleanupHook()
-{
-    TaskBase::cleanupHook();
     m_handle.reset();
     sensor_config config;
     config.operating_mode = OperatingMode::OPERATING_STANDBY;
     if (!set_config(m_sensor_hostname, config, 0)) {
         LOG_ERROR_S << "Failed to configure Lidar!" << endl;
     }
+}
+void Task::cleanupHook()
+{
+    TaskBase::cleanupHook();
 }
 
 sensor_info Task::getMetadata()
