@@ -45,12 +45,6 @@ namespace lidar_ouster {
         ouster::sensor::lidar_mode ld_mode = ouster::sensor::lidar_mode::MODE_1024x20;
 
         /**
-         * The operating mode for the sensor to use.
-         * Refer to OperatingMode for more details.
-         */
-        ouster::sensor::OperatingMode operating_mode = ouster::sensor::OperatingMode::OPERATING_NORMAL;
-
-        /**
          * The multipurpose io mode for the sensor to use.
          * Refer to MultipurposeIOMode for more details.
          */

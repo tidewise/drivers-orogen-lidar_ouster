@@ -43,7 +43,6 @@ bool Task::configureHook()
 {
     if (!TaskBase::configureHook())
         return false;
-
     if (!configureLidar()) {
         return false;
     }
@@ -73,6 +72,11 @@ bool Task::startHook()
 {
     if (!TaskBase::startHook())
         return false;
+    sensor_config config;
+    config.operating_mode = OperatingMode::OPERATING_NORMAL;
+    if (!set_config(m_sensor_hostname, config, 0)) {
+        LOG_ERROR_S << "Failed to configure Lidar!" << endl;
+    }
     return true;
 }
 void Task::updateHook()
@@ -245,7 +249,7 @@ bool Task::configureLidar()
     }
     config.ts_mode = lidar_config.ts_mode;
     config.ld_mode = lidar_config.ld_mode;
-    config.operating_mode = lidar_config.operating_mode;
+    config.operating_mode = OperatingMode::OPERATING_STANDBY;
     config.multipurpose_io_mode = lidar_config.multipurpose_io_mode;
     config.azimuth_window =
         make_pair(lidar_config.azimuth_window[0], lidar_config.azimuth_window[1]);
