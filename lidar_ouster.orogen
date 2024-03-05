@@ -3,6 +3,7 @@
 name "lidar_ouster"
 version "0.1"
 
+using_library "lidar_ouster"
 using_library "lidar_ouster_sdk"
 import_types_from "lidar_ousterTypes.hpp"
 

@@ -6,10 +6,7 @@
   <license></license>
   <url>http://</url>
   <logo>http://</logo>
-  <depend package="base/cmake" />
-
-  <depend package="drivers/lidar_ouster_sdk" />
-  <depend package="base/types" />
+  <depend package="drivers/lidar_ouster" />
   <depend package="base/logging" />
 
   <test_depend name="tools/syskit" />
