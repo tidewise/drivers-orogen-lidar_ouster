@@ -24,8 +24,8 @@ void Task::configureDepthMap()
     m_depth_map.vertical_projection = DepthMap::PROJECTION_TYPE::POLAR;
     m_depth_map.horizontal_projection = DepthMap::PROJECTION_TYPE::POLAR;
 
-    m_depth_map.horizontal_interval.push_back(M_PI * 2.0);
     m_depth_map.horizontal_interval.push_back(0);
+    m_depth_map.horizontal_interval.push_back(M_PI * 2.0);
 
     m_depth_map.vertical_interval.push_back(-(m_vertical_fov / 2) * M_PI / (180.0));
     m_depth_map.vertical_interval.push_back((m_vertical_fov / 2) * M_PI / (180.0));
