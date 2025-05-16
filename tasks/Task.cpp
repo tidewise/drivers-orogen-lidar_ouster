@@ -174,7 +174,7 @@ void Task::convertDataAndWriteOutput(LidarScan& scan)
 {
     auto time = base::Time::now();
     m_depth_map.time = time;
-    m_depth_map.timestamps.push_back(time);
+    m_depth_map.timestamps = { time };
 
     auto range = scan.field(ChanField::RANGE);
     auto range_destaggered =
